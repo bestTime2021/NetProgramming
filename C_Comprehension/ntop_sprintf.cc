@@ -14,7 +14,7 @@ int main(int argc, char *argv[]){
 	assert(argc == 2);
 	
 	int x = atoi(argv[1]);
-	char *p = (char *)&x;
+	u_char *p = (u_char *)&x;
 	char str[MAXLEN];
 	sprintf(str, "%d.%d.%d.%d", p[0], p[1],p[2],p[3]);
 	printf("%s\n", str);
