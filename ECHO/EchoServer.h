@@ -11,37 +11,17 @@
 class EchoServer
 {
 public:
-	EchoServer(int32_t port): port_(port){}
+	EchoServer(char* port): port_(port){}
 
 	void start();
 
 private:
-	int16_t port_;
-	int listening();
-	//function<string ()> callback_;
+	char* port_;
 };
 
-int EchoServer::listening(){
-	int serv_sock = Socket(AF_INET, SOCK_STREAM, 0);
 
-	struct sockaddr_in serv_addr;
-	memset(&serv_addr, 0, sizeof(serv_addr));
-	serv_addr.sin_family = AF_INET;
-	serv_addr.sin_addr.s_addr = htonl(INADDR_ANY); //htonl is not essential, but please add it.
-	serv_addr.sin_port = htons(port_);
-	
-	int option = 1;
-	socklen_t optlen = sizeof(option);
-	setsockopt(serv_sock, SOL_SOCKET, SO_REUSEADDR, (void*)&option, optlen);
-	
-	Bind (serv_sock, (struct sockaddr*) &serv_addr, sizeof(serv_addr));
-	Listen (serv_sock, 5);
-
-	return serv_sock;
-}
 void EchoServer::start(){
-	int serv_sock = listening();
-	
+	int serv_sock = Tcp_listen(NULL, port_, NULL);
 	char ret[1024];
 	while (1){
 		struct sockaddr_in clnt_addr;

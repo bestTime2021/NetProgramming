@@ -7,6 +7,8 @@
 #include <sys/socket.h>	//socket(), bind(), listen(), accept(), connect()
 #include <unistd.h>		//close()
 #include <fcntl.h>	//fcntl()
+#include <netdb.h>	//getaddrinfo()
+#include <cassert>
 #define MAXLEN 1024
 
 void unix_eror(const char*);
@@ -20,6 +22,8 @@ void Bind(int sockfd, struct sockaddr*, socklen_t len);
 void Listen(int servfd, int blocklog);
 int Accept(int servfd, struct cliaddr*, socklen_t &clilen);
 int Connect(int servfd, struct servaddr*, socklen_t &servlen);
+int Tcp_connect(const char *hostname, const char *service);
+int Tcp_listen(const char *hostname, const char *service);
 void Close(int sockfd);
 
 int getSendBuf(int sockfd);
@@ -90,6 +94,74 @@ int Connect(int sockfd, struct sockaddr* addr, socklen_t addrlen){
 	return clntsock;
 }
 
+int Tcp_connect(const char *hostname, const char *service) {
+	int sockfd;
+	struct addrinfo hints, *res, *ressave;
+	memset(&hints, 0, sizeof(hints));
+	hints.ai_family = AF_INET;	//FIXME AF_UNSPEC can resolve IPv4 and IPv6.
+	hints.ai_socktype = SOCK_STREAM;
+
+	if ( getaddrinfo(hostname, service, &hints, &res) != 0)
+			app_error("getaddrinfo() error");
+	ressave = res;
+
+	do {
+		sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
+
+		if (sockfd < 0)
+			continue;
+		if (connect(sockfd, res->ai_addr, res->ai_addrlen) == 0) //success connect
+			break;
+
+		Close(sockfd);
+		res = res->ai_next;
+	} while (res != NULL);
+	
+	if (res == NULL)
+		app_error("Tcp_connect() error");
+
+	freeaddrinfo(ressave);
+
+	return sockfd;
+}
+
+int Tcp_listen(const char *hostname, const char *service, socklen_t *addrlenp) {
+	int listenfd, n;
+	struct addrinfo hints, *res, *ressave;
+	memset(&hints, 0, sizeof(hints));
+	hints.ai_flags = AI_PASSIVE;
+	hints.ai_family = AF_INET; //FIXME AF_UNSPEC
+	hints.ai_socktype = SOCK_STREAM;
+
+	//FIXME
+	if ( (n =getaddrinfo(NULL, service, &hints, &res)) != 0)
+		printf("getaddrinfo() error: %s", gai_strerror(n)), exit(0);
+
+	ressave = res;
+	assert(res != NULL);
+	do {
+		listenfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
+		
+		if (listenfd < 0)
+			continue;
+		Set_REUSEADDR(listenfd);
+		if (bind(listenfd, res->ai_addr, res->ai_addrlen) == 0)
+			break;
+		Close(listenfd);
+		res = res->ai_next;
+	} while (res != NULL);
+
+	if (res == NULL)
+		app_error("Tcp_listen() error, maybe bind() error");
+
+	if (addrlenp)
+		*addrlenp = res->ai_addrlen;
+	Listen(listenfd, 5);
+
+	freeaddrinfo(ressave);
+	return listenfd;
+}
+
 void Close(int sockfd){
 	if (close(sockfd) < 0)
 		unix_error("close() error");
@@ -116,9 +188,9 @@ void Set_NONBLOCK(int sockfd) {
 }
 
 void Set_REUSEADDR(int sockfd) {
-	int optval = 1;	//not zero: turn on the option
-	socklen_t optlen = sizeof(optval);
+	int on = 1;	//not zero: turn on the option
+	socklen_t optlen = sizeof(on);
 
-	if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, (void *)&optval, optlen) < 0)
+	if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, (void *)&on, optlen) < 0)
 		unix_error("setsockopt() error");
 }
