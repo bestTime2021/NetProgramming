@@ -17,16 +17,9 @@ int main(int argc, char **argv)
 	assert(argc == 3);
 	
 	int clnt_sock;
-	struct sockaddr_in serv_addr;
 	char buf[1024];
 
-	memset(&serv_addr, 0, sizeof(serv_addr));
-	serv_addr.sin_family      = AF_INET;
-  inet_pton(AF_INET, argv[1], &serv_addr.sin_addr);
-	serv_addr.sin_port				= htons(atoi(argv[2]));
-
-	clnt_sock = Socket(AF_INET, SOCK_STREAM, 0);
-	Connect(clnt_sock, (struct sockaddr*)&serv_addr, sizeof(serv_addr));
+	clnt_sock = Tcp_connect(argv[1], argv[2]);
 	if (read(clnt_sock, buf, 1024) > 0)
 		fputs(buf, stdout);
 
@@ -37,7 +30,7 @@ int main(int argc, char **argv)
 			if ( (len = write(clnt_sock, buf, strlen(buf))) < 0)
 				unix_error("write() error");
 			if (read(clnt_sock, buf, len) <= 0)
-				printf("read()<=0\n, exit"), exit(0);
+				printf("read()<=0, exit\n"), exit(0);
 			if (len > 0)
 				printf("ECHO: %s", buf);
 			}
