@@ -7,62 +7,109 @@
 #include <unistd.h>
 #include <sys/select.h> //select() and FD_XXX()
 #include <sys/time.h>
-#include <csignal>
 #include "../Wrapper/wrapper.h"
 
-void sig_handle(int signo){
-	printf("recieve a RST\n");
-}
+#define max(a, b) a > b ? a : b
+void Str_cli(FILE *fp, int sockfd);
 int main(int argc, char **argv)
 {
-	signal(SIGPIPE, sig_handle);
 	assert(argc == 3);
+	int connfd;
 	
-	int clnt_sock, stdineof;
-	struct sockaddr_in serv_addr;
-	char buf[1024];
-
-	memset(&serv_addr, 0, sizeof(serv_addr));
-	serv_addr.sin_family      = AF_INET;
-  inet_pton(AF_INET, argv[1], &serv_addr.sin_addr);
-	serv_addr.sin_port				= htons(atoi(argv[2]));
-
-		//socket(), connect()
-	clnt_sock = socket(AF_INET, SOCK_STREAM, 0);
-	connect(clnt_sock, (struct sockaddr*)&serv_addr, sizeof(serv_addr));
-	if (read(clnt_sock, buf, 1024) > 0)
-		fputs(buf, stdout);
-
-	int maxfdp1;
-	fd_set fdset;
-	int len = 0;
-	while (1){
-		FD_SET(clnt_sock, &fdset);
-		FD_SET(0, &fdset);
-		maxfdp1 = clnt_sock + 1; //max(clnt_sock, 0);
-		select(maxfdp1, &fdset, NULL, NULL, NULL);
-		
-		if (FD_ISSET(0, &fdset)) {
-			if ( (len = read(fileno(stdin), buf, 1024)) == 0){
-				stdineof = 1;
-				shutdown(clnt_sock, SHUT_WR);
-				FD_CLR(fileno(stdin), &fdset);
-				continue;
-			}
-
-			len = write(clnt_sock, buf, len);
-		}
-		
-		if (FD_ISSET(clnt_sock, &fdset)){	//clnt_sock readable
-			if ( (len = read(clnt_sock, buf, len)) == 0){
-				if (stdineof == 1)
-					return 0;
-				else
-					unix_error("SERVER terminated prematurely");
-			}
-			write(fileno(stdout), buf, len);
-		}
-	}
+	connfd = Tcp_connect(argv[1], argv[2]);
 	
+	Str_cli(stdin, connfd);
+
+	exit(0);
 }
 
+void Str_cli(FILE *fp, int sockfd) {
+	int maxfdp1, stdineof;
+	ssize_t n, nwritten;
+	fd_set rset, wset;
+	char to[MAXLEN], fr[MAXLEN];
+	char *toiptr, *tooptr, *froptr, *friptr;
+
+	Set_NONBLOCK(sockfd);
+	Set_NONBLOCK(fileno(stdin));
+	Set_NONBLOCK(fileno(stdout));
+
+	toiptr = tooptr = to;
+	friptr = froptr = fr;
+	stdineof = 0;
+
+	maxfdp1 = max(1, sockfd) + 1;
+	while (1) {
+		FD_ZERO(&rset);
+		FD_ZERO(&wset);
+		if (stdineof == 0 && toiptr < &to[MAXLEN]) //to Server
+			FD_SET(STDIN_FILENO, &rset);
+		if (friptr < &fr[MAXLEN])
+			FD_SET(sockfd, &rset);
+		if (tooptr != toiptr)
+			FD_SET(sockfd, &wset);
+		if (froptr != friptr)
+			FD_SET(STDOUT_FILENO, &wset);
+
+		select(maxfdp1, &rset, &wset, NULL, NULL);
+		if (FD_ISSET(STDIN_FILENO, &rset)) {
+			if ( (n = read(STDIN_FILENO, toiptr, &to[MAXLEN]-toiptr)) < 0) {
+				if (errno != EWOULDBLOCK)
+					unix_error("read() in select error");
+			} else if (n == 0) {
+				fprintf(stderr, "EOF on stdin\n");
+				stdineof = 1;
+				if (tooptr == toiptr)		//nothing to write
+					shutdown(sockfd, SHUT_WR);
+			} else {//n > 0 read success.
+				fprintf(stderr, "read() %ld bytes from stdin\n", n);
+				toiptr += n;
+				FD_SET(sockfd, &wset);
+			}
+		}
+
+		if (FD_ISSET(sockfd, &rset)) {	//read from sockfd
+			if ( (n = read(sockfd, friptr, &fr[MAXLEN]-friptr)) < 0) {
+				if (errno != EWOULDBLOCK)
+					unix_error("read() error in select\n");
+			} else if (n == 0) {
+				fprintf(stderr, "EOF on sockfd\n");
+				if (stdineof == 1)
+					return;
+				else
+					unix_error("Server Close");
+			} else {
+				fprintf(stderr, "read() %ld bytes from SERVER\n", n);
+				friptr += n;
+				FD_SET(STDOUT_FILENO, &wset);
+			}
+		}
+		
+		if (FD_ISSET(STDOUT_FILENO, &wset)) {
+			if ( (nwritten = write(STDOUT_FILENO, froptr, friptr-froptr)) < 0) {
+				if (errno != EWOULDBLOCK)
+					unix_error("write() error in Select stdout");
+			} else {
+				fprintf(stderr, "write() %ld bytes to stdout\n\n", nwritten);
+				froptr += nwritten;
+				if (froptr == friptr)
+					froptr = friptr = fr;
+			}
+		}
+		
+		if (FD_ISSET(sockfd, &wset)) { //buf have data send to SERVER
+			if ( (nwritten = write(sockfd, tooptr, toiptr-tooptr)) < 0) {
+				if (errno != EWOULDBLOCK)
+					unix_error("write() error in select sockfd");
+			} else{// if (nwritten >= 0)
+				fprintf(stderr, "write() %ld bytes to SERVER\n", nwritten);
+				tooptr += nwritten;
+				if (tooptr == toiptr){
+					tooptr = toiptr = to;
+					if (stdineof == 1)
+						shutdown(sockfd, SHUT_WR);
+				}
+			}
+		}
+	}
+}
