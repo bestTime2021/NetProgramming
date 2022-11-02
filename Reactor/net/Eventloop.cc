@@ -5,7 +5,10 @@
 #include <unistd.h>
 #include <stdint.h>
 __thread Eventloop* t_loopInThisThread = 0;
-Eventloop::Eventloop(): poll_(new Poll()), timerqueue_(new TimerQueue(this)), 
+Eventloop::Eventloop(): 
+	threadId_(std::this_thread::get_id()),
+	poll_(new Poll()), 
+	timerqueue_(new TimerQueue(this)), 
 	eventloopfd_(::eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC)), 
 	eventloopChannel_(new Channel(this, eventloopfd_))
 {
