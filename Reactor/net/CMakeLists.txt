@@ -1,4 +1,4 @@
-add_library(reactor_net Channel Eventloop Poll)
+add_library(reactor_net Channel Eventloop Poll TimerQueue Timer)
 install(TARGETS reactor_net DESTINATION lib)
 file(GLOB Cpp ".h")
 install(FILES ${Cpp} DESTINATION include/net)

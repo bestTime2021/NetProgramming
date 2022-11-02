@@ -7,7 +7,9 @@
 void Channel::handleEvent() {
 	printf("Channel::handleEvent()\n");
 	if (revents_ & POLLIN) {
-		readCallback_();
+		for (int i = 0; i < 5; ++i)
+			printf("you will call a func() in Channel::handleEvent 5 times\n");		
+		printf("done\n\n");
 	}
 }
 

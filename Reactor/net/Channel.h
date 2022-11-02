@@ -18,7 +18,7 @@ public:
 	void setEvents(int events) { events_ = events; }
 	void setRevents(int revents) { revents_ = revents; }
 	void setIndex(int index) { index_ = index; }
-	void setReadCallback();
+	void setReadCallback(std::function<void()> cb) {readCallback_ = cb;}
 
 	void handleEvent();
 
