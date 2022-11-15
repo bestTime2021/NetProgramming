@@ -8,13 +8,10 @@
 void Channel::handleEvent() {
 //	printf("Channel::handleEvent()\n");
 	if (revents_ & POLLIN) {
+		char buf[1024];
+		::read(fd_, buf, sizeof(buf));//discard
 		readCallback_();
 		printf("Channel::fd_ %d readable\n", fd_);
-		char buf[1024];
-		int len = read(fd_, buf, sizeof(buf));
-		write(fd_, buf, len);
-		*(buf+len) = 0;
-		printf("%s\n", buf);
 	}
 }
 
