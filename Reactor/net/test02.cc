@@ -1,13 +1,17 @@
 #include "net/Eventloop.h"
 #include "net/TcpServer.h"
+#include "net/TcpConnection.h"
 #include <iostream>
 #include <cassert>
+#include <unistd.h>
 using namespace std;
 
 //connfd readable: printf NEW CONN
 
-void hello() {
-	cout << "NEW CONN!\n" << endl;
+void hello(TcpConnection* t, char *buf, ssize_t len) {
+	::write(t->fd(), buf, len);
+	::write(t->fd(), "I just want to customize something\n", 35); 
+	printf("read from client: %s\n", buf);
 }
 
 int main(int argc, char *argv[]) {
@@ -22,6 +26,6 @@ int main(int argc, char *argv[]) {
 
 	Eventloop loop;
 	TcpServer server(&loop, hostname, service);
-	server.setAcceptCallback(hello);
+	server.setMessageCallback(hello);
 	server.start();
 }

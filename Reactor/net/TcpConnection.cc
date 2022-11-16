@@ -1,7 +1,7 @@
 #include "net/TcpConnection.h"
 #include "net/Channel.h"
 #include "net/Eventloop.h"
-
+#include <unistd.h>
 TcpConnection::TcpConnection(Eventloop *loop, std::string name, int connfd):
 	eventloop_(loop),
 	name_(name),
@@ -12,5 +12,7 @@ TcpConnection::TcpConnection(Eventloop *loop, std::string name, int connfd):
 }
 
 void TcpConnection::handRead(){
-	readCallback_();
+	char buf[65535];
+	int len = ::read(connChannel_->fd(), buf, sizeof(buf));
+	mcb_(this, buf, len);
 }

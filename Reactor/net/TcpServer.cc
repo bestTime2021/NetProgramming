@@ -1,12 +1,16 @@
 #include "net/TcpServer.h"
+#include "net/TcpConnection.h"
 #include "net/Eventloop.h"
 #include "net/Acceptor.h"
+#include <string>
 #include <stdio.h>
 
 TcpServer::TcpServer(Eventloop *loop, char *hostname, char *service) : 
 	eventloop_(loop),
-	acceptor_(new Acceptor(loop, hostname, service)){
-	acceptor_->setAcceptCallback(std::bind(&TcpServer::onConn, this));
+	acceptor_(new Acceptor(loop, hostname, service)),
+	tcpConnId_(1){
+	using namespace std::placeholders;
+	acceptor_->setAcceptCallback(std::bind(&TcpServer::handNewConn, this, _1));
 }
 
 TcpServer::~TcpServer() {printf("TcpServer dtor\n"); }
@@ -16,9 +20,9 @@ void TcpServer::start(){
 }
 
 //forward function
-void TcpServer::onConn() {
-	printf("TcpServer::onConn() do self thing\n");
-	printf("and then TcpServer::onConn() do customer thing\n");
-	acceptCallback_();
-	printf("onConn done\n");
+void TcpServer::handNewConn(int connfd) {
+	std::string connId = std::to_string(tcpConnId_++);
+	TcpConnection *connPtr = new TcpConnection(eventloop_, connId, connfd);
+	connMap_[connId] = connPtr;
+	connPtr->setMessageCallback(mcb_);
 }

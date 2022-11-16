@@ -18,9 +18,7 @@ int Acceptor::listen(char *hostname, char *service){
 
 void Acceptor::handleAccept() {
 	int connfd = Acceptor::accept(listenfd_, NULL, NULL);
-	printf("connfd: %d\n", connfd);
-	acceptCb_();
-	printf("Accptor::handleConn() done\n");
+	acceptCb_(connfd);
 }
 
 int Acceptor::accept(int sockfd, struct sockaddr* addr, socklen_t *addrlen) {
