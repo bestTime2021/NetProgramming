@@ -3,6 +3,9 @@ class Eventloop;
 
 class Channel {
 public:
+	typedef std::function<void()> ReadCallback;
+	typedef std::function<void()> CloseCallback;
+
 	Channel(Eventloop *eventloop, int fd):
 		eventloop_(eventloop),
 		fd_(fd),
@@ -18,7 +21,8 @@ public:
 	void setEvents(int events) { events_ = events; }
 	void setRevents(int revents) { revents_ = revents; }
 	void setIndex(int index) { index_ = index; }
-	void setReadCallback(std::function<void()> cb) {readCallback_ = cb;}
+	void setReadCallback(ReadCallback cb) {readCallback_ = cb;}
+	void setCloseCallback(CloseCallback cb) {closeCallback_ = cb;}
 
 	void handleEvent();
 
@@ -31,5 +35,6 @@ private:
 	int revents_;
 	int index_;	//for poll
 
-	std::function<void()> readCallback_;
+	ReadCallback readCallback_;
+	CloseCallback closeCallback_;
 };

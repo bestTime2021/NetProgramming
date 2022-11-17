@@ -26,6 +26,8 @@ public:
 	void runInLoop(Functor);
 	void queueInLoop(Functor);
 
+	void removeChannel(Channel *c) {;}
+
 private:
 	std::thread::id threadId_;
 	std::shared_ptr<Poll> poll_; //FIXME

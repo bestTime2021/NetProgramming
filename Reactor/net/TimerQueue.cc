@@ -21,10 +21,15 @@ void resetTimerfd(int timerfd_, time_t expirationT) {
 void TimerQueue::addTimer(time_t expiration, TimerCallback tcb) {
 
 	if (tcb)printf("TimerQueue::addTimer()\n");
-	if (timers_.empty()) 
-		resetTimerfd(timerfd_, expiration);
 	Timer *timer = new Timer(expiration, tcb);
-	timers_.insert(Entry(expiration, timer));
+	eventloop_->runInLoop(std::bind(&TimerQueue::addTimerInLoop, this, timer));
+}
+
+void TimerQueue::addTimerInLoop(Timer* timer) {
+	assert(eventloop_->isInLoopThread());
+	if (timers_.empty()) 
+		resetTimerfd(timerfd_, timer->expiration());
+	timers_.insert(Entry(timer->expiration(), timer));
 }
 
 void TimerQueue::handleRead() {

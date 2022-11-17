@@ -1,18 +1,17 @@
 #include "net/Channel.h"
 #include "net/Eventloop.h"
+#include <pthread.h>
 #include <iostream>
-void hello() {
-	std::cout << "Hello world\n";
-}
-void hello2() {
-	std::cout << "Hello world2\n";
+
+static Eventloop* g_loop;
+void *func(void *arg) {
+	g_loop->runAfter(1, [](){std::cout << "first of all\n";});
+	g_loop->runAfter(3, [](){std::cout << "hello\n";});
 }
 int main() {
+	pthread_t tid;
 	Eventloop loop;
-//	Channel channel(&loop, 0);
-//	channel.update();
-	int interval = 3;
-	for (int i = 0; i < 5; i++, interval += 3)
-	loop.runAfter(interval, hello);
+	g_loop = &loop;
+	pthread_create(&tid, NULL, func, NULL);
 	loop.loop();
 }

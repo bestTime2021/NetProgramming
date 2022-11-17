@@ -14,5 +14,24 @@ TcpConnection::TcpConnection(Eventloop *loop, std::string name, int connfd):
 void TcpConnection::handRead(){
 	char buf[65535];
 	int len = ::read(connChannel_->fd(), buf, sizeof(buf));
-	mcb_(this, buf, len);
+	if (len == 0){
+		::close(connfd_);//FIXME
+		handClose();
+	}
+	else if (len > 0)
+		mcb_(this, buf, len);
+	else
+		abort();
+}
+
+void TcpConnection::handClose() {
+	//self: do nothing
+	//for TcpServer
+	closeCb_(this);
+}
+
+void TcpConnection::connDestory() {
+	if (connCb_)
+		connCb_();
+	eventloop_->removeChannel(&(*connChannel_));
 }

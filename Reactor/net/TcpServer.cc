@@ -24,5 +24,14 @@ void TcpServer::handNewConn(int connfd) {
 	std::string connId = std::to_string(tcpConnId_++);
 	TcpConnection *connPtr = new TcpConnection(eventloop_, connId, connfd);
 	connMap_[connId] = connPtr;
+	connPtr->setConnCallback(connCb_);
 	connPtr->setMessageCallback(mcb_);
+	using namespace std::placeholders;
+	connPtr->setCloseCallback(std::bind(&TcpServer::removeConn, this, _1));
+}
+
+void TcpServer::removeConn(TcpConnection* conn) {
+	connMap_.erase(conn->name());
+	eventloop_->queueInLoop(
+			std::bind(&TcpConnection::connDestory, conn));
 }

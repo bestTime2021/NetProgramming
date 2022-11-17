@@ -8,6 +8,9 @@ using namespace std;
 
 //connfd readable: printf NEW CONN
 
+void conn() {
+	printf("Disconnected\n");
+}
 void hello(TcpConnection* t, char *buf, ssize_t len) {
 	::write(t->fd(), buf, len);
 	::write(t->fd(), "I just want to customize something\n", 35); 
@@ -26,6 +29,7 @@ int main(int argc, char *argv[]) {
 
 	Eventloop loop;
 	TcpServer server(&loop, hostname, service);
+	server.setConnCallback(conn);
 	server.setMessageCallback(hello);
 	server.start();
 }

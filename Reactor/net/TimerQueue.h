@@ -24,6 +24,7 @@ public:
 		timerchannel_.update();
 	}
 	void addTimer(time_t expiration, TimerCallback); //add Timer to pendingFunctors
+	void addTimerInLoop(Timer*);
 	void handleRead();
 	void getExpired(time_t now, std::vector<Entry>&); //to get Expired Timers by now time.
 	void reset(TimerList &expired, time_t now);

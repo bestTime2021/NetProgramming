@@ -17,6 +17,7 @@ int main(int argc, char *argv[]) {
 		service = argv[2];
 	}
 
-	Acceptor acceptor(hostname, service, hello);
-	acceptor.start();
+	Acceptor acceptor(hostname, service);
+	acceptor.setAcceptCallback(hello);
+//	acceptor.start();
 }
