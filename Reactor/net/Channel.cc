@@ -11,9 +11,9 @@ void Channel::handleEvent() {
 			closeCallback_();
 	}
 	if (revents_ & POLLIN) {
+		printf("Channel::fd_ %d readable\n", fd_);
 		if (readCallback_)
 			readCallback_();
-		printf("Channel::fd_ %d readable\n", fd_);
 	}
 }
 

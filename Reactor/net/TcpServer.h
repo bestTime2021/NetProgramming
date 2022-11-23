@@ -7,11 +7,12 @@
 class Eventloop;
 class Acceptor;
 class TcpConnection;
+class Buffer;
 
 class TcpServer 
 {
 public:
-	typedef std::function<void(TcpConnection*, char*, ssize_t)> MessageCallback;
+	typedef std::function<void(TcpConnection*, Buffer*)> MessageCallback;
 	typedef std::function<void()> ConnCallback;
 	TcpServer(Eventloop *loop, char *hostname, char *service);
 	~TcpServer();
